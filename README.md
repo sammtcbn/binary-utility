@@ -83,6 +83,15 @@ Example:
 ./bin-sha256 -file 1234.txt -start 2 -length 7 -outbin sha256hex.bin
 ```
 
+## bin-checkhex
+
+This tool helps check if the binary file content is as expected.
+
+Usage:
+```
+./bin-checkhex <binary_file> <offset(hex)> <expected_hex_value>
+```
+
 # build executable
 
 To build all tools, you can run this in Linux:

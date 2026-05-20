@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Usage check
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <binary_file> <offset(hex)> <expected_hex_value>"
+    echo "Example: $0 firmware.bin 0xe0000 0x19fdeab6"
+    exit 1
+fi
+
+BINARY_FILE="$1"
+OFFSET_HEX="$2"
+EXPECTED_HEX="$3"
+
+# Validate offset format: must start with 0x
+if [[ "$OFFSET_HEX" =~ ^0x[0-9a-fA-F]+$ ]]; then
+    OFFSET_DEC=$((OFFSET_HEX))
+else
+    echo "Error: Offset '$OFFSET_HEX' must be a valid hexadecimal value starting with 0x"
+    exit 1
+fi
+
+# Validate expected hex format: must start with 0x
+if [[ "$EXPECTED_HEX" =~ ^0x[0-9a-fA-F]+$ ]]; then
+    HEX_NO_PREFIX="${EXPECTED_HEX:2}"
+    HEX_LOWER=$(echo "$HEX_NO_PREFIX" | tr 'A-F' 'a-f')
+else
+    echo "Error: Expected value '$EXPECTED_HEX' must be a valid hexadecimal string starting with 0x"
+    exit 1
+fi
+
+# Check if hex length is even (each byte is 2 hex digits)
+if (( ${#HEX_LOWER} % 2 != 0 )); then
+    echo "Error: Expected hex string length must be even (2 hex digits per byte)"
+    exit 1
+fi
+
+# Calculate number of bytes to read
+BYTE_COUNT=$(( ${#HEX_LOWER} / 2 ))
+
+# Check if the binary file exists
+if [ ! -f "$BINARY_FILE" ]; then
+    echo "Error: File '$BINARY_FILE' not found"
+    exit 1
+fi
+
+# Read bytes from binary file at given offset
+READ_HEX=$(dd if="$BINARY_FILE" bs=1 skip=$OFFSET_DEC count=$BYTE_COUNT 2>/dev/null | xxd -p | tr -d '\n' | tr 'A-F' 'a-f')
+
+# Compare the values
+if [ "$READ_HEX" = "$HEX_LOWER" ]; then
+    echo "✅ Match success: offset $OFFSET_HEX equals $EXPECTED_HEX"
+    exit 0
+else
+    echo "❌ Match failed:"
+    echo " - Actual value at offset $OFFSET_HEX: 0x$READ_HEX"
+    echo " - Expected value              : $EXPECTED_HEX"
+    exit 2
+fi
+
